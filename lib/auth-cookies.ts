@@ -1,3 +1,4 @@
+import { NextResponse } from "next/dist/server/web/spec-extension/response";
 import { cookies } from "next/headers";
 
 /**
@@ -29,4 +30,16 @@ export async function clearGitHubAuth() {
   const cookieStore = await cookies();
   cookieStore.delete("github_token");
   cookieStore.delete("github_user");
+}
+
+/**
+ * Clear all auth-related cookies by setting maxAge to 0
+ * Used in verify route when token is expired
+ */
+export function clearAuthCookies(res: NextResponse): NextResponse {
+  res.cookies.set("github_token", "", { maxAge: 0 });
+  res.cookies.set("github_user", "", { maxAge: 0 });
+  res.cookies.set("token_expires_at", "", { maxAge: 0 });
+  res.cookies.set("github_refresh_token", "", { maxAge: 0 });
+  return res;
 }

@@ -61,7 +61,7 @@ export default function Home() {
     setResult(null);
   }
 
-  function authorizeMock() {
+  function authorizeFlow() {
     // Redirect to backend OAuth start endpoint which will initiate the
     // GitHub OAuth flow. We include the selected writeAccess flag so the
     // server can request appropriate scopes.
@@ -97,7 +97,7 @@ export default function Home() {
         writeAccess={writeAccess}
         onToggleWriteAccess={setWriteAccess}
         onClose={() => setOauthOpen(false)}
-        onAuthorize={authorizeMock}
+        onAuthorize={authorizeFlow}
       />
 
       <header className="topbar">

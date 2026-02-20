@@ -14,6 +14,7 @@ export interface TokenResponse {
   access_token: string;
   token_type: string;
   scope: string;
+  expires_in?: number;
 }
 
 /**
@@ -75,4 +76,42 @@ export async function fetchGitHubUser(accessToken: string): Promise<GitHubUser> 
   }
 
   return response.json() as Promise<GitHubUser>;
+}
+
+/**
+ * Refresh expired access token using refresh token
+ */
+export async function refreshGitHubToken(refreshToken: string): Promise<TokenResponse> {
+  const clientId = process.env.GITHUB_CLIENT_ID;
+  const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error("Missing GitHub OAuth credentials");
+  }
+
+  const response = await fetch("https://github.com/login/oauth/access_token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`GitHub token refresh failed: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+
+  if (data.error) {
+    throw new Error(`GitHub refresh error: ${data.error_description || data.error}`);
+  }
+
+  return data as TokenResponse;
 }
