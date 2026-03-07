@@ -737,6 +737,158 @@ input::placeholder{ color: rgba(234,240,255,.45); }
   white-space: nowrap;
 }
 
+/* ── Locator analysis table ─────────────────────────── */
+.locatorSection{
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-bottom: 16px;
+}
+
+.locatorList{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.locatorRow{
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+
+.locatorBadge{
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.locatorBroken{
+  background: rgba(255, 80, 80, 0.18);
+  color: #ff5050;
+}
+
+.locatorWarn{
+  background: rgba(255, 180, 0, 0.18);
+  color: #e6a800;
+}
+
+.locatorOk{
+  background: rgba(0, 211, 167, 0.18);
+  color: var(--accent2);
+}
+
+.locatorMain{
+  flex: 1;
+  min-width: 0;
+}
+
+.locatorSelector{
+  font-size: 12px;
+  font-weight: 700;
+  font-family: monospace;
+  word-break: break-all;
+  margin-bottom: 3px;
+}
+
+.locatorMeta{
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+
+.locatorReason{
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.locatorFix{
+  font-size: 11px;
+  margin-top: 4px;
+  color: var(--accent2);
+}
+
+.locatorFix code{
+  font-family: monospace;
+  background: rgba(0,0,0,0.25);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.locatorConfidence{
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Progress log (shown while scanning) ───────────── */
+.progressLog{
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progressStep{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--fg);
+}
+
+.progressStep.running{
+  color: var(--muted);
+}
+
+.progressDot{
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent2);
+  flex-shrink: 0;
+}
+
+@keyframes spin{
+  to { transform: rotate(360deg); }
+}
+
+.progressSpinner{
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* ── Error banner ───────────────────────────────────── */
+.errorBanner{
+  background: rgba(255, 80, 80, 0.1);
+  border: 1px solid rgba(255, 80, 80, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #ff5050;
+  margin-bottom: 8px;
+}
+
 .link{
   color: var(--accent);
   text-decoration: none;

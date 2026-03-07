@@ -26,13 +26,17 @@ export function mockRun(config: ScanConfig): RunResult {
     changedFiles:
       config.feature === "Locator Audit Report"
         ? [
-            { path: "reports/locator-audit.json", changes: 1, summary: "New audit report.", status: "added" },
-            { path: "reports/locator-audit.html", changes: 1, summary: "HTML report output.", status: "added" },
+            { path: "reports/locator-audit.json", changes: 1, summary: "New audit report.", status: "added" as const },
+            { path: "reports/locator-audit.html", changes: 1, summary: "HTML report output.", status: "added" as const },
           ]
         : [
-            { path: "pages/LoginPage.ts", changes: 4, summary: "Healed selectors for login flow.", status: "modified" },
-            { path: "pages/DashboardPage.ts", changes: 2, summary: "Replaced brittle XPath with safer fallback.", status: "modified" },
-            { path: "healing/locator-map.json", changes: 1, summary: "Saved locator mapping metadata.", status: "added" },
+            { path: "pages/LoginPage.ts", changes: 4, summary: "Healed selectors for login flow.", status: "modified" as const },
+            { path: "pages/DashboardPage.ts", changes: 2, summary: "Replaced brittle XPath with safer fallback.", status: "modified" as const },
+            { path: "healing/locator-map.json", changes: 1, summary: "Saved locator mapping metadata.", status: "added" as const },
           ],
+    locators: [],
+    totalLocators: 0,
+    brokenCount: 0,
+    workingCount: 0,
   };
 }

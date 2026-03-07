@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import OAuthModal from "@/src/components/OAuthModal";
 import RunCard from "@/src/components/RunCard";
 import Results from "@/src/components/Results";
-import { mockRun } from "@/src/lib/mock";
-import type { RunResult, ScanConfig } from "@/src/lib/types";
+import type { RunResult, ScanConfig, ScanEvent } from "@/src/lib/types";
 
 export default function Home() {
   const year = new Date().getFullYear();
@@ -14,12 +13,14 @@ export default function Home() {
   const [connected, setConnected] = useState(false);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<RunResult | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const [progressLog, setProgressLog] = useState<string[]>([]);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const [writeAccess, setWriteAccess] = useState(true);
 
   const [config, setConfig] = useState<ScanConfig>({
     repoUrl: "",
+    websiteUrl: "",
     feature: "Auto-heal Locators",
     branch: "main",
     output: "Create Pull Request (recommended)",
@@ -28,10 +29,7 @@ export default function Home() {
     writeAccess: true,
   });
 
-  // Check if user is already authenticated on mount
   useEffect(() => {
-    setMounted(true);
-    // Check if github_user cookie exists
     const userCookie = document.cookie
       .split("; ")
       .find((c) => c.startsWith("github_user="))
@@ -40,12 +38,9 @@ export default function Home() {
     if (userCookie) {
       try {
         const user = JSON.parse(decodeURIComponent(userCookie));
-        if (user.login) {
-          setConnected(true);
-          console.log("User already authenticated:", user.login);
-        }
-      } catch (err) {
-        console.error("Failed to parse github_user cookie:", err);
+        if (user.login) setConnected(true);
+      } catch {
+        // ignore
       }
     }
   }, []);
@@ -55,39 +50,82 @@ export default function Home() {
   }
 
   async function disconnect() {
-    // Clear cookies by calling logout endpoint
     await fetch("/api/auth/logout");
     setConnected(false);
     setResult(null);
+    setProgressLog([]);
+    setScanError(null);
   }
 
   function authorizeFlow() {
-    // Redirect to backend OAuth start endpoint which will initiate the
-    // GitHub OAuth flow. We include the selected writeAccess flag so the
-    // server can request appropriate scopes.
     const param = writeAccess ? "1" : "0";
-    const url = `/api/auth/start?writeAccess=${param}`;
-    // close modal before navigation
     setOauthOpen(false);
-    window.location.href = url;
+    window.location.href = `/api/auth/start?writeAccess=${param}`;
   }
 
-  function runMock() {
+  async function runScan() {
     if (!connected) {
       openOAuth();
       return;
     }
-    if (!config.repoUrl.trim()) return;
 
     setRunning(true);
     setResult(null);
+    setProgressLog([]);
+    setScanError(null);
 
-    window.setTimeout(() => {
-      const res = mockRun({ ...config, writeAccess });
-      setResult(res);
+    try {
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ config: { ...config, writeAccess } }),
+      });
+
+      if (!res.ok || !res.body) {
+        throw new Error(`Scan failed: ${res.statusText}`);
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // SSE lines are separated by "\n\n"
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith("data: ")) continue;
+
+          try {
+            const event = JSON.parse(line.slice(6)) as ScanEvent;
+
+            if (event.type === "step") {
+              setProgressLog((prev) => [...prev, event.message]);
+            } else if (event.type === "result") {
+              setResult(event.data);
+              setTimeout(() => {
+                document.getElementById("results")?.scrollIntoView({ behavior: "smooth" });
+              }, 100);
+            } else if (event.type === "error") {
+              setScanError(event.message);
+            }
+          } catch {
+            // skip malformed events
+          }
+        }
+      }
+    } catch (err) {
+      setScanError(err instanceof Error ? err.message : "An unexpected error occurred.");
+    } finally {
       setRunning(false);
-      document.getElementById("results")?.scrollIntoView({ behavior: "smooth" });
-    }, 900);
+    }
   }
 
   return (
@@ -140,15 +178,19 @@ export default function Home() {
           <h1>Auto-heal broken locators from your GitHub repo.</h1>
 
           <p className="lead">
-            Paste your repository link, scan your pages, and automatically repair fragile selectors.
-            Generate a reviewable pull request or export a healing report on demand.
+            Paste your repository link and website URL. AI crawls the live DOM, cross-references
+            your test locators, and reports which ones are broken — with suggested fixes.
           </p>
 
           <div className="cta">
             <button className="btn primary" type="button" onClick={openOAuth}>
               Connect GitHub Repo
             </button>
-            <button className="btn" type="button" onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })}>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })}
+            >
               See how it works
             </button>
           </div>
@@ -167,13 +209,21 @@ export default function Home() {
             isRunning={running}
             config={config}
             onChange={(patch) => setConfig((c) => ({ ...c, ...patch }))}
-            onRun={runMock}
+            onRun={runScan}
             onConnect={openOAuth}
           />
         </aside>
       </main>
 
-      <Results result={result} output={config.output} />
+      {scanError && (
+        <div className="section" style={{ paddingTop: 0 }}>
+          <div className="errorBanner">
+            <strong>Error:</strong> {scanError}
+          </div>
+        </div>
+      )}
+
+      <Results result={result} output={config.output} progressLog={progressLog} />
 
       <section id="how" className="section">
         <h2>How it works</h2>
@@ -210,7 +260,7 @@ export default function Home() {
           <div className="card">
             <div className="icon">🧠</div>
             <h3>Confidence scoring</h3>
-            <p>Every change includes a confidence score and "why this is safer" reasoning.</p>
+            <p>Every change includes a confidence score and &quot;why this is safer&quot; reasoning.</p>
           </div>
 
           <div className="card">
@@ -222,7 +272,7 @@ export default function Home() {
       </section>
 
       <section id="security" className="section">
-        <h2>Security & controls</h2>
+        <h2>Security &amp; controls</h2>
         <div className="strip">
           <div className="pill">Read-only by default</div>
           <div className="pill">Optional PR write access</div>
